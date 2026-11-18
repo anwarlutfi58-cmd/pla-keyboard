@@ -23,17 +23,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      # ✅ Setup Gradle CLI + cache — otomatis install gradle ke PATH
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          gradle-version: '8.4'
+          cache-disabled: false
 
-      # ✅ Ganti setup-android@v3 dengan ini: pakai SDK bawaan runner
+      # ✅ Setup Android SDK tanpa memanggil sdkmanager "tools" (deprecated)
       - name: Configure Android SDK
         run: |
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
@@ -47,8 +44,22 @@ jobs:
         run: |
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
 
+      # ✅ Generate gradlew kalau belum ada (pakai gradle CLI dari setup-gradle)
+      - name: Generate Gradle Wrapper if missing
+        run: |
+          if [ ! -f ./gradlew ]; then
+            echo "gradlew not found, generating..."
+            gradle wrapper --gradle-version 8.4 --distribution-type bin
+          else
+            echo "gradlew already exists"
+          fi
+          ls -la
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Verify Gradle Wrapper
+        run: ./gradlew --version
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace --no-daemon
@@ -61,6 +72,7 @@ jobs:
         with:
           name: PlaKeyboard-debug
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
           retention-days: 30
 
       - name: Upload Release APK
@@ -68,4 +80,5 @@ jobs:
         with:
           name: PlaKeyboard-release-unsigned
           path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
           retention-days: 30
