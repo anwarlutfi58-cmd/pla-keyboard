@@ -4,13 +4,11 @@ import android.inputmethodservice.InputMethodService
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputConnection
 
 class PlaKeyboardService : InputMethodService(), KeyboardViewCustom.KeyListener {
 
     private lateinit var prefs: PrefsManager
     private var keyboardView: KeyboardViewCustom? = null
-    private var currentInputConnection: InputConnection? = null
     private var isShift = false
     private var isCapsLock = false
 
@@ -28,9 +26,10 @@ class PlaKeyboardService : InputMethodService(), KeyboardViewCustom.KeyListener 
         return keyboardView!!
     }
 
-    override fun onStartInput(connection: InputConnection?, restarting: Boolean) {
-        super.onStartInput(connection, restarting)
-        currentInputConnection = connection
+    // ✅ PERBAIKAN: Parameter wajib menggunakan EditorInfo, bukan InputConnection
+    override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
+        super.onStartInput(attribute, restarting)
+        // Tidak perlu assign manual, currentInputConnection sudah diurus otomatis oleh sistem
     }
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
@@ -50,11 +49,16 @@ class PlaKeyboardService : InputMethodService(), KeyboardViewCustom.KeyListener 
             "DEL" -> ic.deleteSurroundingText(1, 0)
             "SPACE" -> ic.commitText(" ", 1)
             "ENTER" -> {
+                // ✅ PERBAIKAN: Cek multiline menggunakan bitwise AND (lebih akurat)
                 val et = currentInputEditorInfo?.inputType ?: 0
-                if (et == EditorInfo.TYPE_TEXT_FLAG_MULTI_LINE)
+                val isMultiline = (et and EditorInfo.TYPE_TEXT_FLAG_MULTI_LINE) != 0
+                
+                if (isMultiline) {
                     ic.commitText("\n", 1)
-                else
+                } else {
                     ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+                    ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+                }
             }
             "SYM" -> keyboardView?.toggleSymbols()
             else -> {
