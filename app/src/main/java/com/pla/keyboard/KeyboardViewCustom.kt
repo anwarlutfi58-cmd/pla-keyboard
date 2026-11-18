@@ -29,22 +29,27 @@ class KeyboardViewCustom(context: Context) : LinearLayout(context) {
         orientation = VERTICAL
         setBackgroundColor(Color.TRANSPARENT)
         rowsContainer = LinearLayout(context).apply { orientation = VERTICAL }
-        addView(rowsContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        // Menggunakan ViewGroup.LayoutParams agar aman dari crash
+        addView(rowsContainer, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         buildKeyboard()
     }
 
     fun applySettings(prefs: PrefsManager) {
-        layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, prefs.getHeightDp().dp(context))
+        val heightPx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            prefs.getHeightDp().toFloat(),
+            context.resources.displayMetrics
+        ).toInt()
+        
+        this.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, heightPx)
         requestLayout()
         rebuildColors(prefs)
     }
 
-    private fun Int.dp(ctx: Context): Int =
-        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, this.toFloat(), ctx.resources.displayMetrics).toInt()
-
     private fun buildKeyboard() {
         rowsContainer.removeAllViews()
         val layout = if (symbolMode) symbolRows else letterRows
+        
         layout.forEachIndexed { idx, chars ->
             val row = LinearLayout(context).apply {
                 orientation = HORIZONTAL
@@ -56,8 +61,10 @@ class KeyboardViewCustom(context: Context) : LinearLayout(context) {
             if (idx == layout.lastIndex) addKey(row, "DEL", true)
             rowsContainer.addView(row)
         }
+        
         val bottom = LinearLayout(context).apply {
-            orientation = HORIZONTAL; gravity = Gravity.CENTER
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, 0).apply { weight = 1f }
         }
         addKey(bottom, "SYM", true)
@@ -133,7 +140,7 @@ class KeyboardViewCustom(context: Context) : LinearLayout(context) {
         for (i in 0 until childCount) {
             val c = getChildAt(i)
             list.add(c)
-            if (c is ViewGroup) list.addAll((c as ViewGroup).childrenRecursive())
+            if (c is ViewGroup) list.addAll(c.childrenRecursive())
         }
         return list
     }
