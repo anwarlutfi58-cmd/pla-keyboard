@@ -26,10 +26,8 @@ class PlaKeyboardService : InputMethodService(), KeyboardViewCustom.KeyListener 
         return keyboardView!!
     }
 
-    // ✅ PERBAIKAN: Parameter wajib menggunakan EditorInfo, bukan InputConnection
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
-        // Tidak perlu assign manual, currentInputConnection sudah diurus otomatis oleh sistem
     }
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
@@ -49,10 +47,8 @@ class PlaKeyboardService : InputMethodService(), KeyboardViewCustom.KeyListener 
             "DEL" -> ic.deleteSurroundingText(1, 0)
             "SPACE" -> ic.commitText(" ", 1)
             "ENTER" -> {
-                // ✅ PERBAIKAN: Cek multiline menggunakan bitwise AND (lebih akurat)
                 val et = currentInputEditorInfo?.inputType ?: 0
                 val isMultiline = (et and EditorInfo.TYPE_TEXT_FLAG_MULTI_LINE) != 0
-                
                 if (isMultiline) {
                     ic.commitText("\n", 1)
                 } else {
